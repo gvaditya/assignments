@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>D3 Page Template</title>
+  <script src="https://d3js.org/d3.v3.min.js"></script>
+  <style>
+  .axis text {
+    font: 1em sans-serif;
+  }
+  .axis line,
+  .axis path {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+  }
+  .legend rect {
+    fill:white;
+    stroke:black;
+    opacity:0.8;}
+    </style>
+  </head>
+  <body>
+    <h1>Theft Data</h1>
+    <script type="text/javascript">
+    var widthScreen = screen.width;
+    var heightScreen = screen.height;
+    var margin = {top: (heightScreen/5), right: (widthScreen/10), bottom: (heightScreen/5), left: (widthScreen/10)},width = widthScreen - margin.left - margin.right,
+    height = heightScreen - margin.top - margin.bottom;
+    var x = d3.scale.ordinal()
+    .rangeRoundBands([0, width], .1);
+    var y = d3.scale.linear()
+    .rangeRound([height, 0]);
+    var color = d3.scale.category20();
+    var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom")
+    .ticks(d3.time.years);
+    var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+    var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    d3.json("finalTheft.json",function(json){
+      dt=json;
+      var dataIntermediate = d3.layout.stack()(['under','over'].map(function(key,i){
+        return dt.map(function(d,j){
+          return {x: d['year'], y: d[key] };
+        })
+      }));
+      var dataStackLayout = d3.layout.stack()(dataIntermediate);
+
+      x.domain(dataStackLayout[0].map(function (d) {
+        return d.x;
+      }));
+      y.domain([0,
+        d3.max(dataStackLayout[dataStackLayout.length - 1],
+          function (d) { return d.y0 + d.y;})
+        ]).nice();
+        var layer = svg.selectAll(".stack")
+        .data(dataStackLayout)
+        .enter().append("g")
+        .attr("class", "stack")
+        .style("fill", function (d, i) {
+          return color(i);
+        });
+        layer.selectAll("rect")
+        .data(function (d) {
+          return d;
+        })
+        .enter().append("rect")
+        .attr("x", function (d) {
+          return x(d.x);
+        })
+        .attr("y", function (d) {
+          return y(d.y + d.y0);
+        })
+        .attr("height", function (d) {
+          return y(d.y0) - y(d.y + d.y0);
+        })
+        .attr("width", x.rangeBand());
+
+          svg.append("g")
+          .attr("class", "axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(xAxis);
+          svg.append("g")
+          .attr("class","axis")
+          .attr("transform","translate(0,0)")
+          .call(yAxis);
+        });
+        var colors=[];
+        for (var i = 0; i < 2; i++) {
+          colors.push(color(i));
+        }
+        var legend = svg.selectAll(".legend")
+        .data(colors)
+        .enter().append("g")
+        .attr("class", "legend")
+        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+        legend.append("rect")
+        .attr("x", width - 80)
+        .attr("width", 15)
+        .attr("height", 15)
+        .style("fill", function(d, i) {return colors.slice().reverse()[i];});
+
+        legend.append("text")
+        .attr("x", width - 60)
+        .attr("y", 7)
+        .attr("dy", ".35em")
+        .style("text-anchor", "start")
+        .style("font-size","1em")
+        .text(function(d, i) {
+          switch (i) {
+            case 0: return "Under $500";
+            case 1: return "Over $500";
+
+          }});
+          </script>
+          </body>
+          </html>

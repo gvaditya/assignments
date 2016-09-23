@@ -1,99 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
 
-  <!DOCTYPE html>
+<head>
 
-<html>
-<meta charset="utf-8">
 
-<style>
+  <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
 
-.axis--x path {
-  display: none;
-}
+  <style>
+  .axis path {
+    fill: none;
+    stroke: #777;
+    shape-rendering: crispEdges;
+  }
+  .axis text {
+    font-family: Lato;
+    font-size: 13px;
+  }
+  </style>
 
-.line {
-  fill: none;
-  stroke-width: 1.5px;
-}
+</head>
 
-</style>
 <body>
-  <center><h4>Statistics for arrest and no arrest between 2001 and 2016</h4></center>
 
-  <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+  <div class="container">
+    <h1>Data of arrests of assault cases in chicago between 2001 to 2016</h1>
+    <div class="jumbotron">
+      <svg id="visualisation" width="1000" height="530"></svg>
+      <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+      <script>
+      Array.prototype.unique = function() {
+        var a = this.concat();
+        for(var i=0; i<a.length; ++i) {
+          for(var j=i+1; j<a.length; ++j) {
+            if(a[i] === a[j])
+            a.splice(j--, 1);
+          }
+        }
 
-<script>
-  var color = d3.scale.category10();
-var newData = [];
-
-  var data = d3.json("../JSON/finalAssault.json", function(error, data) {
-    data.forEach(function(d,i){
-      var yr = d.year;
-      var ar = {"year":yr,"type":"Arrest","value":d.arrest};
-      var nr = {"year":yr,"type":"No Arrest","value":d.noArrest};
-      newData[newData.length] = ar;
-      newData[newData.length] = nr;
-    });
-
-
-        var margin = {top: 30, right: 20, bottom: 30, left: 50},
-        width = 900 - margin.left - margin.right,
-        height = 500 - margin.top - margin.bottom;
-
-
-        // Set the ranges
-        var x = d3.scale.ordinal().domain(newData.map(function(d) { return d.year; })).rangePoints([0,width]);
-        var y = d3.scale.linear().range([height, 0]).domain([0,25000]).nice();
-
-        // Define the axes
-        var xAxis = d3.svg.axis().scale(x)
-        .orient("bottom").ticks(3);
-
-        var yAxis = d3.svg.axis().scale(y)
-        .orient("left").ticks(5);
-
-        // Define the line
-        var priceline = d3.svg.line()
-        .x(function(d) { return x(d.year); })
-        .y(function(d) { return y(d.value); });
-
-        var svg = d3.select("body")
-        .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-            .attr("transform",
-                  "translate(" + margin.left + "," + margin.top + ")");
-
-
-
-          // Nest the entries by symbol
-            var dataNest = d3.nest()
-                .key(function(d) {return d.type;})
-                .entries(newData);
-
-            // Loop through each symbol / key
-            dataNest.forEach(function(d) {
-                svg.append("path")
-                    .attr("class", "line")
-                    .attr("d", priceline(d.values))
-                    .style("stroke", function (d, i) {
-                      return color(i);
-                    });
+        return a;
+      };
+      function newMap(dataGiven,key)//function to pass a unique array of a property of json
+      {
+        var keys = Object.keys(dataGiven);
+        var map1=[];
+        for(i=0;i<keys.length;i++)
+        {
+          var newMap = dataGiven[keys[i]].map(function(d){
+            return d[key];});
+            map1=map1.concat(newMap);
+          }
+          map1.unique();
+          return map1;
+        }
+        function InitChart() {
+          d3.json("/json/finalAssault.json",function(error,data){
+            //data of different types being stored in different variables
+            var data1 = data.arrest;
+            var data2 = data.noArrest;
+            data1.sort(function(a, b) {
+              return parseFloat(a.year) - parseFloat(b.year);
             });
+            data2.sort(function(a, b) {
+              return parseFloat(a.year) - parseFloat(b.year);
+            });
+            var vis = d3.select("#visualisation"),
+            WIDTH = 1000,
+            HEIGHT = 500,
+            MARGINS = {
+              top: 20,
+              right: 20,
+              bottom: 20,
+              left: 60
+            },
+            //defining the scales
+            xScale = d3.scale.ordinal().domain(newMap(data,'year')).rangePoints([MARGINS.left,WIDTH-MARGINS.right]);
+            yScale = d3.scale.linear().range([HEIGHT - MARGINS.top, MARGINS.bottom]).domain([0, d3.max(newMap(data,'value'))]).nice(),
+            //defining the axes
+            xAxis = d3.svg.axis()
+            .scale(xScale),
+            yAxis = d3.svg.axis()
+            .scale(yScale)
+            .orient("left");
 
-            // Add the X Axis
-                svg.append("g")
-                .attr("class", "x axis")
-                .attr("transform", "translate(0," + height + ")")
-                .call(xAxis);
+            vis.append("svg:g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + (HEIGHT - MARGINS.bottom) + ")")
+            .call(xAxis);
+            vis.append("svg:g")
+            .attr("class", "y axis")
+            .attr("transform", "translate(" + (MARGINS.left) + ",0)")
+            .call(yAxis);
+            var lineGen = d3.svg.line()
+            .x(function(d) {
+              return xScale(d.year);
+            })
+            .y(function(d) {
+              return yScale(d.value);
+            })
+            .interpolate("basis");
+            vis.append('svg:path')
+            .attr('d', lineGen(data1))
+            .attr('stroke', 'green')
+            .attr('stroke-width', 2)
+            .attr('fill', 'none');
+            vis.append('svg:path')
+            .attr('d', lineGen(data2))
+            .attr('stroke', 'blue')
+            .attr('stroke-width', 2)
+            .attr('fill', 'none');
+            vis.append("svg:text")
+            .attr("class", "x label")
+            .attr("x", WIDTH/2)
+            .attr("y", HEIGHT +MARGINS.bottom )
+            .text("YEARS");
+            vis.append("svg:text")
+            .attr("class", "y label")
+            .attr("y", (MARGINS.left)/6)
+            .attr("x",-(WIDTH*3)/10)
+            .attr("transform", "rotate(-90)")
+            .text("Number of cases");
+            var colors=['green','blue']
+            var legend = vis.selectAll(".legend")
+            .data(colors)
+            .enter().append("g")
+            .attr("class", "legend")
+            .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
 
-            // Add the Y Axis
-            svg.append("g")
-                .attr("class", "y axis")
-                .call(yAxis);
+            legend.append("rect")
+            .attr("x", WIDTH - 150)
+            .attr("width", 15)
+            .attr("height", 15)
+            .style("fill", function(d, i) {return colors.slice().reverse()[i];});
 
-      });  //d3 json
+            legend.append("text")
+            .attr("x", WIDTH - 130)
+            .attr("y", 7)
+            .attr("dy", ".35em")
+            .style("text-anchor", "start")
+            .style("font-size","1em")
+            .text(function(d, i) {
+              switch (i) {
+                case 0: return "NOT ARRESTED";
+                case 1: return "ARRESTED";
 
-    </script>
+              }});
+          });
+        }
+        InitChart();
+        </script>
+      </div>
+
+    </div>
+
   </body>
-</html>
+
+  </html>

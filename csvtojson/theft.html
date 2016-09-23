@@ -21,7 +21,7 @@
     </style>
   </head>
   <body>
-    <h1>Theft Data</h1>
+    <center><h1>Theft Data</h1></center>
     <script type="text/javascript">
     var widthScreen = screen.width;
     var heightScreen = screen.height;
@@ -44,15 +44,16 @@
     .attr("height", height + margin.top + margin.bottom)
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-    d3.json("finalTheft.json",function(json){
+    d3.json("/json/finalTheft.json",function(json){
       dt=json;
-      var dataIntermediate = d3.layout.stack()(['under','over'].map(function(key,i){
-        return dt.map(function(d,j){
-          return {x: d['year'], y: d[key] };
+      var dataIntermediate = d3.layout.stack()(['under','over'].map(function(key){
+        return dt.map(function(d){
+          return {x: Object.keys(d)[0], y: d[Object.keys(d)[0]][key] };
         })
       }));
       var dataStackLayout = d3.layout.stack()(dataIntermediate);
-
+      console.log(dt);
+      console.log(dataIntermediate);
       x.domain(dataStackLayout[0].map(function (d) {
         return d.x;
       }));
@@ -60,6 +61,7 @@
         d3.max(dataStackLayout[dataStackLayout.length - 1],
           function (d) { return d.y0 + d.y;})
         ]).nice();
+        console.log(y.domain());
         var layer = svg.selectAll(".stack")
         .data(dataStackLayout)
         .enter().append("g")
